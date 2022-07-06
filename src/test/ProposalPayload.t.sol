@@ -16,6 +16,8 @@ import "../OtcEscrowApprovals.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract ProposalPayloadTest is DSTestPlus, stdCheats {
+    event Swap(uint256 balAmount, uint256 aaveAmount);
+
     Vm private vm = Vm(HEVM_ADDRESS);
 
     address public constant aaveTokenAddress = 0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9;
@@ -47,6 +49,9 @@ contract ProposalPayloadTest is DSTestPlus, stdCheats {
 
     uint256 private proposalId;
 
+    OtcEscrowApprovals public otcEscrowApprovals;
+    ProposalPayload public proposalPayload;
+
     function setUp() public {
         // aave whales may need to be updated based on the block being used
         // these are sometimes exchange accounts or whale who move their funds
@@ -57,7 +62,7 @@ contract ProposalPayloadTest is DSTestPlus, stdCheats {
         aaveWhales.push(0x2FAF487A4414Fe77e2327F0bf4AE2a264a776AD2);
 
         // Deploying OTC Escrow Approvals contract
-        OtcEscrowApprovals otcEscrowApprovals = new OtcEscrowApprovals(
+        otcEscrowApprovals = new OtcEscrowApprovals(
             balancerTreasury,
             aaveTreasury,
             balancerTokenAddress,
@@ -69,7 +74,7 @@ contract ProposalPayloadTest is DSTestPlus, stdCheats {
         vm.label(otcEscrowApprovalsAddress, "OtcEscrowApprovals");
 
         // Deploying Proposal Payload contract
-        ProposalPayload proposalPayload = new ProposalPayload(otcEscrowApprovals, aaveAmount);
+        proposalPayload = new ProposalPayload(otcEscrowApprovals, aaveAmount);
         proposalPayloadAddress = address(proposalPayload);
         vm.label(proposalPayloadAddress, "ProposalPayload");
 
@@ -84,7 +89,7 @@ contract ProposalPayloadTest is DSTestPlus, stdCheats {
         vm.prank(balancerTreasury);
         IERC20(balancerTokenAddress).approve(otcEscrowApprovalsAddress, balancerAmount);
 
-        // create proposal is configured to deploy a Payload contract and call execute() as a delegatecall
+        // create proposal is configured to call execute() as a delegatecall
         // most proposals can use this format - you likely will not have to update this
         _createProposal();
 
@@ -96,9 +101,36 @@ contract ProposalPayloadTest is DSTestPlus, stdCheats {
     }
 
     function testExecute() public {
-        // Pre-execution assertations
+        // Check that Balancer Treasury has approved OTC Escrow Approvals contract to transfer balancer amount of tokens
+        assertEq(IERC20(balancerTokenAddress).allowance(balancerTreasury, otcEscrowApprovalsAddress), balancerAmount);
+
+        uint256 initialAaveTreasuryAaveBalance = IERC20(aaveTokenAddress).balanceOf(aaveTreasury);
+        uint256 initialAaveTreasuryBalancerBalance = IERC20(balancerTokenAddress).balanceOf(aaveTreasury);
+        uint256 initialBalancerTreasuryAaveBalance = IERC20(aaveTokenAddress).balanceOf(balancerTreasury);
+        uint256 initialBalancerTreasuryBalancerBalance = IERC20(balancerTokenAddress).balanceOf(balancerTreasury);
+
+        vm.expectEmit(false, false, false, true);
+        emit Swap(balancerAmount, aaveAmount);
         _executeProposal();
-        // Post-execution assertations
+
+        // Checking final post execution balances
+        assertEq(initialAaveTreasuryAaveBalance - aaveAmount, IERC20(aaveTokenAddress).balanceOf(aaveTreasury));
+        assertEq(
+            initialAaveTreasuryBalancerBalance + balancerAmount,
+            IERC20(balancerTokenAddress).balanceOf(aaveTreasury)
+        );
+        assertEq(initialBalancerTreasuryAaveBalance + aaveAmount, IERC20(aaveTokenAddress).balanceOf(balancerTreasury));
+        assertEq(
+            initialBalancerTreasuryBalancerBalance - balancerAmount,
+            IERC20(balancerTokenAddress).balanceOf(balancerTreasury)
+        );
+    }
+
+    function testSecondExecute() public {
+        _executeProposal();
+
+        vm.expectRevert(OtcEscrowApprovals.SwapAlreadyOccured.selector);
+        otcEscrowApprovals.swap();
     }
 
     function _executeProposal() public {
