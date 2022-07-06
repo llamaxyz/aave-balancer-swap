@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-pragma solidity ^0.8.12;
+pragma solidity ^0.8.15;
 
 // testing libraries
 import "@ds/test.sol";
@@ -12,11 +12,22 @@ import {DSTestPlus} from "@solmate/test/utils/DSTestPlus.sol";
 import "../external/aave/IAaveGovernanceV2.sol";
 import "../external/aave/IExecutorWithTimelock.sol";
 import "../ProposalPayload.sol";
+import "../OtcEscrowApprovals.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract ProposalPayloadTest is DSTestPlus, stdCheats {
+    event Swap(uint256 balAmount, uint256 aaveAmount);
+
     Vm private vm = Vm(HEVM_ADDRESS);
 
-    address private aaveTokenAddress = 0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9;
+    address public constant aaveTokenAddress = 0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9;
+    address public constant balancerTokenAddress = 0xba100000625a3754423978a60c9317c58a424e3D;
+
+    address public constant aaveTreasury = 0x25F2226B597E8F9514B3F68F00f494cF4f286491;
+    address public constant balancerTreasury = 0x10A19e7eE7d7F8a52822f6817de8ea18204F2e4f;
+
+    uint256 public constant aaveAmount = 15400e18;
+    uint256 public constant balancerAmount = 200000e18;
 
     address private aaveGovernanceAddress = 0xEC568fffba86c094cf06b22134B23074DFE2252c;
     address private aaveGovernanceShortExecutor = 0xEE56e2B3D491590B5b31738cC34d5232F378a8D5;
@@ -27,8 +38,7 @@ contract ProposalPayloadTest is DSTestPlus, stdCheats {
     address[] private aaveWhales;
 
     address private proposalPayloadAddress;
-    address private tokenDistributorAddress;
-    address private ecosystemReserveAddress;
+    address private otcEscrowApprovalsAddress;
 
     address[] private targets;
     uint256[] private values;
@@ -39,6 +49,9 @@ contract ProposalPayloadTest is DSTestPlus, stdCheats {
 
     uint256 private proposalId;
 
+    OtcEscrowApprovals public otcEscrowApprovals;
+    ProposalPayload public proposalPayload;
+
     function setUp() public {
         // aave whales may need to be updated based on the block being used
         // these are sometimes exchange accounts or whale who move their funds
@@ -48,7 +61,35 @@ contract ProposalPayloadTest is DSTestPlus, stdCheats {
         aaveWhales.push(0x26a78D5b6d7a7acEEDD1e6eE3229b372A624d8b7);
         aaveWhales.push(0x2FAF487A4414Fe77e2327F0bf4AE2a264a776AD2);
 
-        // create proposal is configured to deploy a Payload contract and call execute() as a delegatecall
+        // Deploying OTC Escrow Approvals contract
+        otcEscrowApprovals = new OtcEscrowApprovals(
+            balancerTreasury,
+            aaveTreasury,
+            balancerTokenAddress,
+            aaveTokenAddress,
+            balancerAmount,
+            aaveAmount
+        );
+        otcEscrowApprovalsAddress = address(otcEscrowApprovals);
+        vm.label(otcEscrowApprovalsAddress, "OtcEscrowApprovals");
+
+        // Deploying Proposal Payload contract
+        proposalPayload = new ProposalPayload(otcEscrowApprovals, aaveAmount);
+        proposalPayloadAddress = address(proposalPayload);
+        vm.label(proposalPayloadAddress, "ProposalPayload");
+
+        vm.label(aaveTokenAddress, "aaveTokenAddress");
+        vm.label(balancerTokenAddress, "balancerTokenAddress");
+        vm.label(aaveTreasury, "aaveTreasury");
+        vm.label(balancerTreasury, "balancerTreasury");
+        vm.label(aaveGovernanceAddress, "aaveGovernance");
+        vm.label(aaveGovernanceShortExecutor, "aaveGovernanceShortExecutor");
+
+        // Balancer Treasury approving spend of balancer amount to OTC Escrow Approvals contract
+        vm.prank(balancerTreasury);
+        IERC20(balancerTokenAddress).approve(otcEscrowApprovalsAddress, balancerAmount);
+
+        // create proposal is configured to call execute() as a delegatecall
         // most proposals can use this format - you likely will not have to update this
         _createProposal();
 
@@ -60,9 +101,36 @@ contract ProposalPayloadTest is DSTestPlus, stdCheats {
     }
 
     function testExecute() public {
-        // Pre-execution assertations
+        // Check that Balancer Treasury has approved OTC Escrow Approvals contract to transfer balancer amount of tokens
+        assertEq(IERC20(balancerTokenAddress).allowance(balancerTreasury, otcEscrowApprovalsAddress), balancerAmount);
+
+        uint256 initialAaveTreasuryAaveBalance = IERC20(aaveTokenAddress).balanceOf(aaveTreasury);
+        uint256 initialAaveTreasuryBalancerBalance = IERC20(balancerTokenAddress).balanceOf(aaveTreasury);
+        uint256 initialBalancerTreasuryAaveBalance = IERC20(aaveTokenAddress).balanceOf(balancerTreasury);
+        uint256 initialBalancerTreasuryBalancerBalance = IERC20(balancerTokenAddress).balanceOf(balancerTreasury);
+
+        vm.expectEmit(false, false, false, true);
+        emit Swap(balancerAmount, aaveAmount);
         _executeProposal();
-        // Post-execution assertations
+
+        // Checking final post execution balances
+        assertEq(initialAaveTreasuryAaveBalance - aaveAmount, IERC20(aaveTokenAddress).balanceOf(aaveTreasury));
+        assertEq(
+            initialAaveTreasuryBalancerBalance + balancerAmount,
+            IERC20(balancerTokenAddress).balanceOf(aaveTreasury)
+        );
+        assertEq(initialBalancerTreasuryAaveBalance + aaveAmount, IERC20(aaveTokenAddress).balanceOf(balancerTreasury));
+        assertEq(
+            initialBalancerTreasuryBalancerBalance - balancerAmount,
+            IERC20(balancerTokenAddress).balanceOf(balancerTreasury)
+        );
+    }
+
+    function testSecondExecute() public {
+        _executeProposal();
+
+        vm.expectRevert(OtcEscrowApprovals.SwapAlreadyOccured.selector);
+        otcEscrowApprovals.swap();
     }
 
     function _executeProposal() public {
@@ -79,13 +147,6 @@ contract ProposalPayloadTest is DSTestPlus, stdCheats {
     /*******************************************************************************/
 
     function _createProposal() public {
-        // Uncomment to deploy new implementation contracts for testing
-        // tokenDistributorAddress = deployCode("TokenDistributor.sol:TokenDistributor");
-        // ecosystemReserveAddress = deployCode("AaveEcosystemReserve.sol:AaveEcosystemReserve");
-
-        ProposalPayload proposalPayload = new ProposalPayload();
-        proposalPayloadAddress = address(proposalPayload);
-
         bytes memory emptyBytes;
 
         targets.push(proposalPayloadAddress);
