@@ -1,6 +1,5 @@
-// SPDX-License-Identifier: agpl-3.0
-pragma solidity >=0.4.22 <0.9.0;
-pragma abicoder v2;
+// SPDX-License-Identifier: AGPL-3.0-only
+pragma solidity ^0.8.15;
 
 import {IExecutorWithTimelock} from "./IExecutorWithTimelock.sol";
 

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-pragma solidity 0.8.12;
+pragma solidity ^0.8.15;
 
 import {ILendingPool} from "./external/aave/ILendingPool.sol";
 
-/// @title <TITLE>
-/// @author <AUTHOR>
-/// @notice <DESCRIPTION>
+/// @title Payload to approve and execute BAL <> AAVE Swap
+/// @author Llama
+/// @notice Provides an execute function for Aave governance to approve and execute the BAL <> AAVE Swap
 contract ProposalPayload {
     /*///////////////////////////////////////////////////////////////
                                CONSTANTS
