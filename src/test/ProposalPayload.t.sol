@@ -26,7 +26,7 @@ contract ProposalPayloadTest is DSTestPlus, stdCheats {
     address public constant aaveTreasury = 0x25F2226B597E8F9514B3F68F00f494cF4f286491;
     address public constant balancerTreasury = 0x10A19e7eE7d7F8a52822f6817de8ea18204F2e4f;
 
-    uint256 public constant aaveAmount = 15400e18;
+    uint256 public constant aaveAmount = 1737755e16;
     uint256 public constant balancerAmount = 200000e18;
 
     address private aaveGovernanceAddress = 0xEC568fffba86c094cf06b22134B23074DFE2252c;
@@ -126,7 +126,7 @@ contract ProposalPayloadTest is DSTestPlus, stdCheats {
         );
     }
 
-    function testSecondExecute() public {
+    function testSecondSwap() public {
         _executeProposal();
 
         vm.expectRevert(OtcEscrowApprovals.SwapAlreadyOccured.selector);
