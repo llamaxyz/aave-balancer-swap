@@ -62,14 +62,7 @@ contract ProposalPayloadTest is DSTestPlus, stdCheats {
         aaveWhales.push(0x2FAF487A4414Fe77e2327F0bf4AE2a264a776AD2);
 
         // Deploying OTC Escrow Approvals contract
-        otcEscrowApprovals = new OtcEscrowApprovals(
-            balancerTreasury,
-            aaveTreasury,
-            balancerTokenAddress,
-            aaveTokenAddress,
-            balancerAmount,
-            aaveAmount
-        );
+        otcEscrowApprovals = new OtcEscrowApprovals(balancerAmount, aaveAmount);
         otcEscrowApprovalsAddress = address(otcEscrowApprovals);
         vm.label(otcEscrowApprovalsAddress, "OtcEscrowApprovals");
 

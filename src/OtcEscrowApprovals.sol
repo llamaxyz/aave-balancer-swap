@@ -16,11 +16,11 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 contract OtcEscrowApprovals {
     using SafeERC20 for IERC20;
 
-    address public immutable balancerDAO;
-    address public immutable aaveDAO;
+    address public constant BALANCER_TREASURY = 0x10A19e7eE7d7F8a52822f6817de8ea18204F2e4f;
+    address public constant AAVE_ECOSYSTEM_RESERVE = 0x25F2226B597E8F9514B3F68F00f494cF4f286491;
 
-    address public immutable balToken;
-    address public immutable aaveToken;
+    IERC20 public constant BAL = IERC20(0xba100000625a3754423978a60c9317c58a424e3D);
+    IERC20 public constant AAVE = IERC20(0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9);
 
     uint256 public immutable balAmount;
     uint256 public immutable aaveAmount;
@@ -31,20 +31,7 @@ contract OtcEscrowApprovals {
 
     error SwapAlreadyOccured();
 
-    constructor(
-        address balancerDAO_,
-        address aaveDAO_,
-        address balToken_,
-        address aaveToken_,
-        uint256 balAmount_,
-        uint256 aaveAmount_
-    ) {
-        balancerDAO = balancerDAO_;
-        aaveDAO = aaveDAO_;
-
-        balToken = balToken_;
-        aaveToken = aaveToken_;
-
+    constructor(uint256 balAmount_, uint256 aaveAmount_) {
         balAmount = balAmount_;
         aaveAmount = aaveAmount_;
     }
@@ -57,10 +44,10 @@ contract OtcEscrowApprovals {
         hasSwapOccured = true;
 
         // Transfer expected receivedToken from beneficiary
-        IERC20(balToken).safeTransferFrom(balancerDAO, aaveDAO, balAmount);
+        BAL.safeTransferFrom(BALANCER_TREASURY, AAVE_ECOSYSTEM_RESERVE, balAmount);
 
         // Transfer sentToken to beneficiary
-        IERC20(aaveToken).safeTransferFrom(aaveDAO, balancerDAO, aaveAmount);
+        AAVE.safeTransferFrom(AAVE_ECOSYSTEM_RESERVE, BALANCER_TREASURY, aaveAmount);
 
         emit Swap(balAmount, aaveAmount);
     }
