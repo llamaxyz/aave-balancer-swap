@@ -33,6 +33,11 @@ contract ProposalPayloadTest is DSTestPlus, stdCheats {
     OtcEscrowApprovals public constant otcEscrowApprovals =
         OtcEscrowApprovals(0x5AE986d7ca23fc3519daaa589E1d38d19BA42a47);
 
+    ProposalPayload public constant proposalPayload = ProposalPayload(0xc730008C64783a283988b0fA3b5eE6b6F997922A);
+
+    address private proposalPayloadAddress = address(proposalPayload);
+    address private otcEscrowApprovalsAddress = address(otcEscrowApprovals);
+
     address private aaveGovernanceAddress = 0xEC568fffba86c094cf06b22134B23074DFE2252c;
     address private aaveGovernanceShortExecutor = 0xEE56e2B3D491590B5b31738cC34d5232F378a8D5;
 
@@ -40,9 +45,6 @@ contract ProposalPayloadTest is DSTestPlus, stdCheats {
     IExecutorWithTimelock private shortExecutor = IExecutorWithTimelock(aaveGovernanceShortExecutor);
 
     address[] private aaveWhales;
-
-    address private proposalPayloadAddress;
-    address private otcEscrowApprovalsAddress;
 
     address[] private targets;
     uint256[] private values;
@@ -53,8 +55,6 @@ contract ProposalPayloadTest is DSTestPlus, stdCheats {
 
     uint256 private proposalId;
 
-    ProposalPayload public proposalPayload;
-
     function setUp() public {
         // aave whales may need to be updated based on the block being used
         // these are sometimes exchange accounts or whale who move their funds
@@ -64,14 +64,8 @@ contract ProposalPayloadTest is DSTestPlus, stdCheats {
         aaveWhales.push(0x26a78D5b6d7a7acEEDD1e6eE3229b372A624d8b7);
         aaveWhales.push(0x2FAF487A4414Fe77e2327F0bf4AE2a264a776AD2);
 
-        otcEscrowApprovalsAddress = address(otcEscrowApprovals);
         vm.label(otcEscrowApprovalsAddress, "OtcEscrowApprovals");
-
-        // Deploying Proposal Payload contract
-        proposalPayload = new ProposalPayload();
-        proposalPayloadAddress = address(proposalPayload);
         vm.label(proposalPayloadAddress, "ProposalPayload");
-
         vm.label(aaveTokenAddress, "aaveTokenAddress");
         vm.label(balancerTokenAddress, "balancerTokenAddress");
         vm.label(aaveEcosystemReserve, "aaveEcosystemReserve");
