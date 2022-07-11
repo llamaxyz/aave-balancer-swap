@@ -19,17 +19,16 @@ contract ProposalPayload {
 
     address public constant AAVE_TOKEN = 0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9;
 
-    OtcEscrowApprovals public immutable otcEscrowApprovals;
+    uint256 public constant AAVE_AMOUNT = 1690728e16;
 
-    uint256 public immutable aaveAmount;
+    OtcEscrowApprovals public immutable otcEscrowApprovals;
 
     /*******************
      *   CONSTRUCTOR   *
      *******************/
 
-    constructor(OtcEscrowApprovals _otcEscrowApprovals, uint256 _aaveAmount) {
+    constructor(OtcEscrowApprovals _otcEscrowApprovals) {
         otcEscrowApprovals = _otcEscrowApprovals;
-        aaveAmount = _aaveAmount;
     }
 
     /*****************
@@ -43,7 +42,7 @@ contract ProposalPayload {
             AAVE_ECOSYSTEM_RESERVE,
             AAVE_TOKEN,
             address(otcEscrowApprovals),
-            aaveAmount
+            AAVE_AMOUNT
         );
         // Execute the OTC Escrow Approvals swap
         otcEscrowApprovals.swap();
