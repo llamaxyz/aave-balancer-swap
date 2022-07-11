@@ -30,6 +30,9 @@ contract ProposalPayloadTest is DSTestPlus, stdCheats {
     uint256 public constant aaveAmount = 1690728e16;
     uint256 public constant balancerAmount = 200000e18;
 
+    OtcEscrowApprovals public constant otcEscrowApprovals =
+        OtcEscrowApprovals(0x5AE986d7ca23fc3519daaa589E1d38d19BA42a47);
+
     address private aaveGovernanceAddress = 0xEC568fffba86c094cf06b22134B23074DFE2252c;
     address private aaveGovernanceShortExecutor = 0xEE56e2B3D491590B5b31738cC34d5232F378a8D5;
 
@@ -50,7 +53,6 @@ contract ProposalPayloadTest is DSTestPlus, stdCheats {
 
     uint256 private proposalId;
 
-    OtcEscrowApprovals public otcEscrowApprovals;
     ProposalPayload public proposalPayload;
 
     function setUp() public {
@@ -62,13 +64,11 @@ contract ProposalPayloadTest is DSTestPlus, stdCheats {
         aaveWhales.push(0x26a78D5b6d7a7acEEDD1e6eE3229b372A624d8b7);
         aaveWhales.push(0x2FAF487A4414Fe77e2327F0bf4AE2a264a776AD2);
 
-        // Deploying OTC Escrow Approvals contract
-        otcEscrowApprovals = new OtcEscrowApprovals();
         otcEscrowApprovalsAddress = address(otcEscrowApprovals);
         vm.label(otcEscrowApprovalsAddress, "OtcEscrowApprovals");
 
         // Deploying Proposal Payload contract
-        proposalPayload = new ProposalPayload(otcEscrowApprovals);
+        proposalPayload = new ProposalPayload();
         proposalPayloadAddress = address(proposalPayload);
         vm.label(proposalPayloadAddress, "ProposalPayload");
 

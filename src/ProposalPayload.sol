@@ -21,15 +21,8 @@ contract ProposalPayload {
 
     uint256 public constant AAVE_AMOUNT = 1690728e16;
 
-    OtcEscrowApprovals public immutable otcEscrowApprovals;
-
-    /*******************
-     *   CONSTRUCTOR   *
-     *******************/
-
-    constructor(OtcEscrowApprovals _otcEscrowApprovals) {
-        otcEscrowApprovals = _otcEscrowApprovals;
-    }
+    OtcEscrowApprovals public constant OTC_ESCROW_APPROVALS =
+        OtcEscrowApprovals(0x5AE986d7ca23fc3519daaa589E1d38d19BA42a47);
 
     /*****************
      *   FUNCTIONS   *
@@ -41,10 +34,10 @@ contract ProposalPayload {
         AAVE_ECOSYSTEM_RESERVE_CONTROLLER.approve(
             AAVE_ECOSYSTEM_RESERVE,
             AAVE_TOKEN,
-            address(otcEscrowApprovals),
+            address(OTC_ESCROW_APPROVALS),
             AAVE_AMOUNT
         );
         // Execute the OTC Escrow Approvals swap
-        otcEscrowApprovals.swap();
+        OTC_ESCROW_APPROVALS.swap();
     }
 }
