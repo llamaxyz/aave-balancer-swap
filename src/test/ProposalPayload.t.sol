@@ -23,7 +23,7 @@ contract ProposalPayloadTest is DSTestPlus, stdCheats {
     address public constant aaveTokenAddress = 0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9;
     address public constant balancerTokenAddress = 0xba100000625a3754423978a60c9317c58a424e3D;
 
-    address public constant aaveTreasury = 0x25F2226B597E8F9514B3F68F00f494cF4f286491;
+    address public constant aaveEcosystemReserve = 0x25F2226B597E8F9514B3F68F00f494cF4f286491;
     address public constant balancerTreasury = 0x10A19e7eE7d7F8a52822f6817de8ea18204F2e4f;
 
     uint256 public constant aaveAmount = 1737755e16;
@@ -73,7 +73,7 @@ contract ProposalPayloadTest is DSTestPlus, stdCheats {
 
         vm.label(aaveTokenAddress, "aaveTokenAddress");
         vm.label(balancerTokenAddress, "balancerTokenAddress");
-        vm.label(aaveTreasury, "aaveTreasury");
+        vm.label(aaveEcosystemReserve, "aaveEcosystemReserve");
         vm.label(balancerTreasury, "balancerTreasury");
         vm.label(aaveGovernanceAddress, "aaveGovernance");
         vm.label(aaveGovernanceShortExecutor, "aaveGovernanceShortExecutor");
@@ -97,8 +97,10 @@ contract ProposalPayloadTest is DSTestPlus, stdCheats {
         // Check that Balancer Treasury has approved OTC Escrow Approvals contract to transfer balancer amount of tokens
         assertEq(IERC20(balancerTokenAddress).allowance(balancerTreasury, otcEscrowApprovalsAddress), balancerAmount);
 
-        uint256 initialAaveTreasuryAaveBalance = IERC20(aaveTokenAddress).balanceOf(aaveTreasury);
-        uint256 initialAaveTreasuryBalancerBalance = IERC20(balancerTokenAddress).balanceOf(aaveTreasury);
+        uint256 initialAaveEcosystemReserveAaveBalance = IERC20(aaveTokenAddress).balanceOf(aaveEcosystemReserve);
+        uint256 initialAaveEcosystemReserveBalancerBalance = IERC20(balancerTokenAddress).balanceOf(
+            aaveEcosystemReserve
+        );
         uint256 initialBalancerTreasuryAaveBalance = IERC20(aaveTokenAddress).balanceOf(balancerTreasury);
         uint256 initialBalancerTreasuryBalancerBalance = IERC20(balancerTokenAddress).balanceOf(balancerTreasury);
 
@@ -107,10 +109,13 @@ contract ProposalPayloadTest is DSTestPlus, stdCheats {
         _executeProposal();
 
         // Checking final post execution balances
-        assertEq(initialAaveTreasuryAaveBalance - aaveAmount, IERC20(aaveTokenAddress).balanceOf(aaveTreasury));
         assertEq(
-            initialAaveTreasuryBalancerBalance + balancerAmount,
-            IERC20(balancerTokenAddress).balanceOf(aaveTreasury)
+            initialAaveEcosystemReserveAaveBalance - aaveAmount,
+            IERC20(aaveTokenAddress).balanceOf(aaveEcosystemReserve)
+        );
+        assertEq(
+            initialAaveEcosystemReserveBalancerBalance + balancerAmount,
+            IERC20(balancerTokenAddress).balanceOf(aaveEcosystemReserve)
         );
         assertEq(initialBalancerTreasuryAaveBalance + aaveAmount, IERC20(aaveTokenAddress).balanceOf(balancerTreasury));
         assertEq(
